@@ -18,6 +18,8 @@ GREEN = "#48E5C2"
 PADX = 5 
 PADY = 5
 
+WIDTH = 30
+
 class CUHLabelText(tk.Label):
     '''
         Display strings as formatted text. 
@@ -31,14 +33,12 @@ class CUHLabelText(tk.Label):
     def __init__(
         self, parent, text: str, row: int, col: int, disp: str = "info",
         columnspan: int = 1, rowspan: int = 1):
-        super().__init__(parent)
+        super().__init__(
+            parent, width = WIDTH, text = text, background=BLACK,
+            justify = tk.CENTER, font = ("Calibri 12"), )
 
         disp = disp.lower()
 
-        self["text"] = text 
-        self["font"] = ("Calibri 12")
-        self["justify"] = tk.CENTER
-        self["background"] = BLACK
         if "warn" in disp:
             self["foreground"] = ORANGE
         elif "good" in disp:
@@ -47,14 +47,11 @@ class CUHLabelText(tk.Label):
             self["foreground"] = RED
         else:
             self["foreground"] = BLUE
-  
-        self["pady"] = PADY
-        self["padx"] = PADX
         
 
         self.grid(
             row = row, column = col, sticky = "EW", columnspan=columnspan, 
-            rowspan=rowspan,
+            rowspan=rowspan, padx = PADX, pady = PADY
         )
 
 class CUHTitleText(tk.Label):
@@ -68,12 +65,11 @@ class CUHTitleText(tk.Label):
         self["font"] = ("Calibri 14 bold")
         self["foreground"] = ORANGE
         self["background"] = BLACK
-        self["padx"] = PADX
-        self["pady"] = PADY
         self["text"] = text 
 
         self.grid(
-            row = 0, column = 0, sticky = "NSEW", columnspan=columnspan
+            row = 0, column = 0, sticky = "NSEW", columnspan=columnspan,
+            padx = PADX, pady = PADY
         )
 
 class CUHAppButton(tk.Button):
@@ -86,36 +82,42 @@ class CUHAppButton(tk.Button):
             background = ORANGE,
             activebackground = RED,
             foreground = BLUE,
-            pady = PADX,
-            padx = PADY, 
-            font = "Calibri 12",
+            font = ("Calibri 12"),
             text = text, 
             command = func,
+            width = WIDTH,
         )
 
         self.grid(
             row = row, 
             column = col, 
-            sticky = "EW"
+            #sticky = "EW",
+            padx = PADX,
+            pady = PADY
         )
 
 class CUHDropDownMenu(ttk.Combobox):
     '''
-        Simpe drop-down menu with formatting 
-
+        Simple drop-down menu with formatting 
+        self.current() returns index of current selection 
     '''
     def __init__(self, parent, values: list, row: int, col: int, 
-    columnspan: int = 1, rowspan: int = 1):
-        self.font = ('Calibi', 12)
+    callbackfunc, columnspan: int = 1, rowspan: int = 1, 
+    current_selection_index: int = 0, width: int = WIDTH*2):
+        #self.current_selection = tk.StringVar()
+        self.font = ('Calibri', 12)
         super().__init__(
             parent, font = self.font, state = "readonly", values = values,
-            justify = tk.CENTER, height = 10, width = 10
+            justify = tk.CENTER, height = 15, width = width
         )
+        #self.config(textvariable = self.current_selection)
+        self.current(current_selection_index)
         
+        self.bind("<<ComboboxSelected>>", callbackfunc)
 
         self.grid(
-            row = row, column = col, sticky = "EW", columnspan=columnspan, 
-            rowspan=rowspan, 
+            row = row, column = col, columnspan=columnspan, 
+            rowspan=rowspan, padx = PADX, pady = PADY
         )
 
 class CUHCheckBox(tk.Checkbutton): 
@@ -128,10 +130,37 @@ class CUHCheckBox(tk.Checkbutton):
         self.var = tk.IntVar(parent, value = 0)
         super().__init__(parent, text = text, variable = self.var, 
         justify=tk.CENTER, background = BLACK,
-        activebackground = BLACK, foreground = BLUE, pady = PADX, padx = PADY,
-        font = ('Calibi', 12),
+        activebackground = BLACK, foreground = BLUE, width = WIDTH,
+        font = ('Calibri', 12), 
         )
 
         self.grid(
-            row = row, column = col, sticky = "EW", columnspan=columnspan
+            row = row, column = col, sticky = "EW", columnspan=columnspan,
+            padx = PADX, pady = PADY
         )
+
+class CUHFrame(tk.Frame):
+    '''
+        Simple frame widget for framing other widgets. 
+
+    '''
+
+    def __init__(self, parent, row: int, col: int, columnspan: int  =1):
+        super().__init__(parent, background=BLACK, padx = 0, pady = 0,)
+        self.grid(
+            row = row, column = col, columnspan=columnspan, sticky='NSEW'
+        )
+
+class CUHHorizontalRule(ttk.Separator):
+    '''
+        Simple horizontal rule 
+    '''
+    def __init__(self, parent, row: int, col: int, columnspan:int = 1):
+        s = ttk.Style()
+        s.configure('TSeparator', background = ORANGE)
+        super().__init__(
+            parent, orient = tk.HORIZONTAL, style = 'TSeparator'
+        )
+       
+
+        self.grid(row=row, column=col, columnspan = columnspan, sticky = "EW")

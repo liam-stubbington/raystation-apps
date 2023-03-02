@@ -1,4 +1,4 @@
-#from structure_set_classes import CUHRTStructureSet
+from structure_set_classes import CUHRTStructureSet
 from os import path
 import tkinter as tk 
 from widgets.cuh_tkinter import *

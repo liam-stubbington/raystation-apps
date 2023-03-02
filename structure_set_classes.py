@@ -5,12 +5,45 @@ from json import load, dump, dumps
 from datetime import datetime as dt
 from tkinter import Tk
 from tkinter import messagebox as mb
+from tkinter.messagebox import WARNING
 
-exam = get_current("Examination")
-patientID = get_current("Patient").PatientID
-case = get_current("Case")
+class CUHGetCurrentStructureSetObject():
+    '''
+        Script object used to get the current structure set properties in 
+        RayStation. 
 
-ss = case.PatientModel.StructureSets[exam.Name]
+        Subsequent script objects inherit from this. 
+    '''
+    def __init__(self):
+
+        self.exam = get_current("Examination")
+        self.patientID = get_current("Patient").PatientID
+        self.case = get_current("Case")
+
+        self.ss = self.case.PatientModel.StructureSets[
+            self.exam.Name]
+  
+
+class CUHRTWarningMessage(): 
+    ''' 
+        Warns the user about selecting the RTCT image set. 
+        Returns True or False. 
+    '''
+    def __init__(self, title: str = "WARNING: ", message: str = None):
+        
+        root = Tk()
+        root.iconbitmap(
+            "//MOSAIQAPP-20/mosaiq_app/TOOLS/RayStation"
+            "/microscope_io/microscope.ico"
+            )
+        root.withdraw() 
+        self.answer = mb.askokcancel(
+            title = title,
+            message = message,
+            icon = WARNING
+        )
+        root.destroy() 
+
 
 class CUHRTStructureSetException(Exception):
     '''
@@ -28,7 +61,8 @@ class CUHRTStructureSetException(Exception):
             self.message = message 
         root = Tk()
         root.iconbitmap(
-            "//MOSAIQAPP-20/mosaiq_app/TOOLS/RayStation/microscope_io/microscope.ico"
+            "//MOSAIQAPP-20/mosaiq_app/TOOLS/RayStation"
+            "/microscope_io/microscope.ico"
             )
         root.withdraw() 
         mb.showerror(
@@ -38,7 +72,7 @@ class CUHRTStructureSetException(Exception):
         super().__init__(self.message)
         exit()
 
-class CUHRTROI():
+class CUHRTROI(CUHGetCurrentStructureSetObject):
     ''' 
         Workhorse of ROILockTime script and other script tools.
 
@@ -53,13 +87,15 @@ class CUHRTROI():
         Methods: 
             • load_contours 
                 loads contours into memory if not called at init 
+            • unload_contours
+                opposite of above 
             • restore_contours
                 adds structures back in to current structure set from file
             
     '''
 
     def __init__(self, roi: dict, ):
-
+        super().__init__()
         self.roi = roi 
             
     def load_contours(self):
@@ -67,7 +103,7 @@ class CUHRTROI():
             Attempts to load contours into memory from RayStation get_current
             Patient Model object. 
         '''
-        roi = ss.RoiGeometries[self.roi['label']]
+        roi = self.ss.RoiGeometries[self.roi['label']]
 
         try:
             if hasattr(roi.PrimaryShape, "Contours"):
@@ -77,7 +113,6 @@ class CUHRTROI():
                 self.roi['has_contours'] = True
             else:
                 print(f"No contours for roi: {self.roi['label']}.")
-                self.roi['contours'] = None
                 self.roi['has_contours'] = False
         except:
             raise CUHRTStructureSetException(
@@ -87,6 +122,16 @@ class CUHRTROI():
                 )
             )
 
+    def unload_contours(self):
+        '''
+            Attempts to remove contours from the current CUHRTROI 
+            if loaded into memory 
+        '''
+        if 'contours' in self.roi.keys():
+            self.roi.pop('contours') 
+            self.roi['has_contours'] = False
+
+
     def restore_contours(self):
         '''
             Attempts to add contours from the CUHRTROI object 
@@ -94,24 +139,24 @@ class CUHRTROI():
         '''        
         print(f"Attempting to recreate ROI: {self.roi['label']}")
 
-        new_roi_name = case.PatientModel.GetUniqueRoiName(
+        new_roi_name = self.case.PatientModel.GetUniqueRoiName(
             DesiredName = self.roi["label"]
             )
 
-        case.PatientModel.CreateRoi(
+        self.case.PatientModel.CreateRoi(
             Name = new_roi_name,Type = "Undefined",
             Color = self.roi['colour'],
         )
 
-        new_roi = case.PatientModel.RegionsOfInterest[new_roi_name]
+        new_roi = self.case.PatientModel.RegionsOfInterest[new_roi_name]
 
         new_roi.CreateBoxGeometry(
-            Size={"x":2,"y":2,"z":2},Examination = exam,
+            Size={"x":2,"y":2,"z":2},Examination = self.exam,
             Center = {"x":0,"y":0,"z":0},Representation = 'Voxels',
             VoxelSize = None
         )
 
-        new_roi_geometry = ss.RoiGeometries[new_roi_name]
+        new_roi_geometry = self.ss.RoiGeometries[new_roi_name]
         new_roi_geometry.SetRepresentation(Representation = "Contours")
 
         try:
@@ -135,7 +180,7 @@ class CUHRTROI():
             self.load_contours()
 
         try:
-            roi2 = ss.RoiGeometries[roi2]
+            roi2 = self.ss.RoiGeometries[roi2]
             roi2 = CUHRTROI(
                 roi = {
                     'label': roi2.OfRoi.Name,
@@ -157,18 +202,19 @@ class CUHRTROI():
             self, roi2
         )
             
-class CUHRTCompareROI():
+class CUHRTCompareROI(CUHGetCurrentStructureSetObject):
     '''
         Workhorse or compare_two_rois method of CUHRTROI objects. 
 
         Attributes:
             • volume_match: bool
             • centroid_match: bool
-            • 
+            • roi_comparison_results
+                - RayStation method of extracting Dice and Hausdorff distance
     '''
 
     def __init__(self, roi1, roi2):
-
+        super().__init__()
         self.volume_match = round(roi1.roi['volume'],2) == round(
             roi2.roi['volume'],2)
 
@@ -179,7 +225,7 @@ class CUHRTCompareROI():
         ]]
         self.centroid_match = not any(deltas)
         try:
-            self.roi_comparison_results = ss.ComparisonOfRoiGeometries(
+            self.roi_comparison_results = self.ss.ComparisonOfRoiGeometries(
                 RoiA = roi1.roi['label'],
                 RoiB = roi2.roi['label'],
                 ComputeDistanceToAgreementMeasures = True
@@ -193,7 +239,7 @@ class CUHRTCompareROI():
                 )
             )
 
-class CUHRTStructureSet():
+class CUHRTStructureSet(CUHGetCurrentStructureSetObject):
     ''' 
         Workhorse of ROILockTime script.
 
@@ -217,7 +263,8 @@ class CUHRTStructureSet():
 
     '''
 
-    def __init__(self, f_path = None, ss_index: int = None):
+    def __init__(self, sub_structure_set = None, f_path = None, ):
+        super().__init__()
 
         if f_path:
             try: 
@@ -235,19 +282,18 @@ class CUHRTStructureSet():
                     message = "Cannot load RT SS from file."
                 )
                      
-        elif ss_index is not None:
-            sub_s = ss.SubStructureSets[ss_index]
+        elif sub_structure_set is not None:
 
             try:
-                rev = sub_s.Review.ReviewTime
+                rev = sub_structure_set.Review.ReviewTime
                 self.locktime = dt(
                     year = rev.Year, month = rev.Month, day = rev.Day, 
                     hour = rev.Hour, minute = rev.Minute, 
                     second = rev.Second).strftime("%m_%d_%Y_%H_%M_%S")
-                self.reviewer = sub_s.Review.ReviewerFullName.replace("^"," ")
-                self.f_name = "_".join(
+                self.reviewer = sub_structure_set.Review.ReviewerFullName.replace("^"," ")
+                self.f_name = "+".join(
                     [
-                        patientID,
+                        self.patientID,
                         self.reviewer.replace(" ","_"),
                         self.locktime,
                         ".json"
@@ -256,9 +302,9 @@ class CUHRTStructureSet():
             except:
                 self.locktime = None 
                 self.reviewer = None 
-                self.f_name = "_".join(
+                self.f_name = "+".join(
                     [
-                        patientID,
+                        self.patientID,
                         "UNNAPPROVED",
                         ".json"
                     ]
@@ -277,7 +323,7 @@ class CUHRTStructureSet():
                         'volume': roi.GetRoiVolume(), 
                         'has_contours': False
                     },
-                ) for roi in sub_s.RoiStructures
+                ) for roi in sub_structure_set.RoiStructures
             ]
 
         else:
@@ -290,25 +336,33 @@ class CUHRTStructureSet():
 
     def json_export(self, f_out: str, include_contours: bool = False):
         '''
-            Write contents of CUHRTStructureSetCompare to 
+            Write contents of CUHRTStructureSet to 
             JSON.
 
             Params:
                 f_out: path to output json data. 
                 include_contours: bool 
+             
         '''
 
         if include_contours:
             for roi in self.rois:
                 roi.load_contours() 
-
-        self.rois = [roi.roi for roi in self.rois]
-
+        else: 
+            for roi in self.rois:
+                roi.unload_contours()
+ 
+        json_data_out = {
+            "f_name" : self.f_name,
+            "locktime" : self.locktime,
+            "reviewer" : self.reviewer,
+            "rois": [roi.roi for roi in self.rois]
+        }
 
         try: 
             with open(path.join(f_out, self.f_name), 
             'w',encoding='utf-8') as f:
-                dump(self.__dict__, f, indent=4, sort_keys=True) 
+                dump(json_data_out, f, indent=4, sort_keys=True) 
         except Exception as err:
             raise CUHRTStructureSetException(
                 error = err, 
@@ -324,5 +378,3 @@ class CUHRTStructureSet():
         for roi in self.rois:
             if roi.roi['has_contours']: 
                 roi.restore_contours() 
-
-  
