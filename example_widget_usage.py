@@ -1,4 +1,4 @@
-from structure_set_classes import CUHRTStructureSet
+#from structure_set_classes import CUHRTStructureSet
 from os import path
 import tkinter as tk 
 from widgets.cuh_tkinter import *
@@ -46,7 +46,7 @@ from widgets.cuh_tkinter import *
 
 # --------------------------------------------------------------------------- #
 
-__title__ = "ROI LockTime App"
+__title__ = "My App Title"
 __version__ = "v0.0.0"
 
 root = tk.Tk() 
@@ -71,7 +71,7 @@ a_button = CUHAppButton(
 )
 
 a_drop_down = CUHDropDownMenu(root, ["option "+str(i) for i in range(1,20)], 
-1, 2)
+1, 2, lambda x: print('Drop Down Menu Option changed'))
 
 a_radio_button = CUHCheckBox(root, 'Selection',2,0, columnspan=3 )
 

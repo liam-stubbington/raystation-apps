@@ -362,6 +362,7 @@ class CUHRTStructureSet(CUHGetCurrentStructureSetObject):
                         'has_contours': False
                     },
                 ) for roi in sub_structure_set.RoiStructures
+                if roi.HasContours()
             ]
 
         else:
@@ -398,7 +399,7 @@ class CUHRTStructureSet(CUHGetCurrentStructureSetObject):
         }
 
         try: 
-            with open(path.join(f_out, self.f_name), 
+            with open(path.normpath(path.join(f_out, self.f_name)), 
             'w',encoding='utf-8') as f:
                 dump(json_data_out, f, indent=4, sort_keys=True) 
         except Exception as err:
