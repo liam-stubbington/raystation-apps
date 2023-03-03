@@ -173,7 +173,7 @@ class CUHRTROI(CUHGetCurrentStructureSetObject):
     def compare_with_roi(self, roi2: str):
         '''
             Return comparison result for two CUHRTROI objects. 
-            roi2 must be a ROI label in the current structure set. 
+            roi2 must be a ROI label, or index, in the current structure set. 
         '''
 
         if not self.roi['has_contours']:
@@ -207,14 +207,29 @@ class CUHRTCompareROI(CUHGetCurrentStructureSetObject):
         Workhorse or compare_two_rois method of CUHRTROI objects. 
 
         Attributes:
+            • reference_roi_label 
+            • compare_roi_label
+            • reference_volume: float 
+            • compare_volume: float 
             • volume_match: bool
+            • reference_centroid: dict
+            • compare_centroid: dict
             • centroid_match: bool
             • roi_comparison_results
                 - RayStation method of extracting Dice and Hausdorff distance
+        
+        Methods:
+            • return_formatted_dict
     '''
 
     def __init__(self, roi1, roi2):
         super().__init__()
+        self.reference_roi_label = roi1.roi['label']
+        self.reference_roi_volume = roi1.roi['volume']
+        self.reference_roi_centroid = roi1.roi['centroid']
+        self.compare_roi_label = roi2.roi['label']
+        self.compare_roi_volume = roi2.roi['volume']
+        self.compare_roi_centroid = roi2.roi['centroid']
         self.volume_match = round(roi1.roi['volume'],2) == round(
             roi2.roi['volume'],2)
 
@@ -238,6 +253,29 @@ class CUHRTCompareROI(CUHGetCurrentStructureSetObject):
                 f"{roi1['label']} and {roi2['label']}."
                 )
             )
+    
+    def return_formatted_dict(self) -> dict: 
+        '''
+            Returns a nicely formatted dict of CUHRTCompareROI object 
+        '''
+        return {
+            'Reference ROI Label': self.reference_roi_label,
+            'Reference ROI Volume [cc]': self.reference_roi_volume,
+            'Reference ROI Centroid [cm]': self.reference_roi_centroid,
+            'Compare ROI Label': self.compare_roi_label,
+            'Compare ROI Volume [cc]': self.compare_roi_volume,
+            'Compare ROI Centroid [cm]': self.compare_roi_centroid,
+            'DICE': self.roi_comparison_results['DiceSimilarityCoefficient'],
+            'Precision': self.roi_comparison_results['Precision'],
+            'Sensitivity': self.roi_comparison_results['Sensitivity'],
+            'Specificity': self.roi_comparison_results['Specificity'],
+            'MeanDistanceToAgreement': self.roi_comparison_results[
+                'MeanDistanceToAgreement'
+            ],
+            'MaxDistanceToAgreement': self.roi_comparison_results[
+                'MaxDistanceToAgreement'
+            ],
+        }
 
 class CUHRTStructureSet(CUHGetCurrentStructureSetObject):
     ''' 

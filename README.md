@@ -3,6 +3,9 @@ This project contains a collection of python modules for interacting with RaySta
 
 ---
 
+## End User Guide 
+Volume match is within ± 1cc, centroid match is within 1mm.
+
 ## CUHRTException 
 Custom exception. 
 Presents a tkinter messagebox with a customizable error message and the TraceBack. 

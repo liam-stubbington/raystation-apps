@@ -3,6 +3,7 @@ from os import path
 import tkinter as tk 
 from tkinter import filedialog as fd
 from widgets.cuh_tkinter import *
+from csv import DictWriter
 
 
 __title__ = "ROI LockTime App"
@@ -64,9 +65,10 @@ class ROILockTimeRow(tk.Frame):
             ]
             roi1 = self.current_roi
             volume_match = (
-                round(roi1.roi['volume'],2) == round(roi2.roi['volume'],2)
+                abs(round(roi1.roi['volume'],2) - round(roi2.roi['volume'],2))
+                < 1
             )
-            deltas = [abs(delta)>0.01 for delta in [
+            deltas = [abs(delta)>0.1 for delta in [
                 roi1.roi['centroid']['x'] - roi2.roi['centroid']['x'],
                 roi1.roi['centroid']['y'] - roi2.roi['centroid']['y'],
                 roi1.roi['centroid']['z'] - roi2.roi['centroid']['z']
@@ -95,11 +97,14 @@ class ROILockTimeRow(tk.Frame):
             Find the closest matching roi from list of reference_rois 
             Reference rois must be objects of type CUHRTROI. 
         '''
-        try: 
-            index = [
-                roi.roi['label'] for roi in self.reference_rois
-                ].index(self.current_roi.roi['label'])
-        except:
+        if self.reference_rois:
+            try: 
+                index = [
+                    roi.roi['label'] for roi in self.reference_rois
+                    ].index(self.current_roi.roi['label'])
+            except  ValueError:
+                index = 0
+        else:
             index = 0
         return index
 
@@ -111,14 +116,15 @@ class ROILockTimeWindow(tk.Tk):
     def __init__(self):
 
         # -- INITIALISATION -- #
-        raystation = CUHGetCurrentStructureSetObject() 
+        self.raystation = CUHGetCurrentStructureSetObject() 
         self.structure_sets = [CUHRTStructureSet(sub_structure_set = i)
-        for i in raystation.ss.SubStructureSets]
+        for i in self.raystation.ss.SubStructureSets]
         # TO DO
         self.reference_structure_set = None 
         self.sub_structure_set_labels = [
             ss.f_name.split("+")[1:-1] for ss in self.structure_sets
             ]
+        self.reference_structure_set_contours_restored = False
 
         super().__init__() 
         self.title(__title__ + " " + __version__)
@@ -175,8 +181,16 @@ class ROILockTimeWindow(tk.Tk):
         self.include_contours = CUHCheckBox(
             bottom_row_frame, 'Include contours?', 0, 1
         ) 
-        CUHLabelText(bottom_row_frame, '', 0, 2)
-        CUHLabelText(bottom_row_frame, '', 0, 3)
+
+        CUHAppButton(
+            bottom_row_frame, 'Restore reference contours', 
+            self.restore_reference_contours,0,2
+        ) 
+
+        CUHAppButton(
+            bottom_row_frame, 'Compare restored contours', 
+            self.export_comparison_of_restored_contours,0,3
+        ) 
 
         self.initial_warning_message()
 
@@ -254,6 +268,88 @@ class ROILockTimeWindow(tk.Tk):
                 f"{path.join(f_out, self.current_structure_set.f_name)}"
             )
         )
+
+    def restore_reference_contours(self):
+        '''
+            Attempts to restore reference sub-structure set contours 
+            into the current exam's structure set. 
+        '''
+        if self.reference_structure_set is not None:
+            self.reference_structure_set.restore_all_contours()
+            self.reference_structure_set_contours_restored = True
+            CUHRTWarningMessage(
+                title = "INFO: ",
+                message = ("If contours were found in the reference structure "
+                "set, these have been restored into the current exam's "
+                "structure set.")
+            )
+        else:
+            CUHRTWarningMessage(
+                title = "ERROR: ",
+                message = "You must load a reference structure set first."
+            )
+            self.reference_structure_set_contours_restored = False
+
+    def export_comparison_of_restored_contours(self):
+        '''
+            If reference contours has been restored into the current structure
+            set, it is possible to evaluate Dice and Hausdorff distance for 
+            these structures.  
+        '''
+        list_of_compare_objects = [] 
+        roi_geometries = self.raystation.ss.RoiGeometries
+        if self.reference_structure_set_contours_restored:
+            for roi1 in self.current_structure_set.rois:
+                try:
+                    index = [
+                        roi.OfRoi.Name for roi in roi_geometries
+                        ].index(roi1.roi['label']+ " (1)") # TO DO
+                    list_of_compare_objects.append(
+                        roi1.compare_with_roi(index)
+                    )
+                except ValueError:
+                    continue
+
+            to_csv = [
+                compare_object.return_formatted_dict()
+                for compare_object in list_of_compare_objects
+            ]
+            
+            headers = to_csv[0].keys()
+
+            csv_file_name = "_".join(
+                [self.raystation.patientID, 'ROIComparison.csv']
+                ) 
+
+            f_out = path.join(F_ROOT, csv_file_name)
+
+            csv_first_line = (
+                f"{self.current_structure_set.f_name} compared with "
+                f"{self.reference_structure_set.f_name}.\n\n"
+            
+            )
+
+            with open(f_out, 'w', encoding='utf-8', newline = '') as f:
+                f.write(csv_first_line)
+                dw = DictWriter(f, headers)
+                dw.writeheader()
+                dw.writerows(to_csv)
+
+            CUHRTWarningMessage(
+                title = "SUCCESS: ",
+                message = (
+                    "Structure similarity metrics exported:\n"
+                    f"{f_out}."
+                )
+            )
+
+        else:
+            CUHRTWarningMessage(
+                title = "ERRROR: ",
+                message = ("This method only works through the App if you "
+                "have already restored some contours into the current exam's "
+                "structure set.")
+            )
 
 
 
