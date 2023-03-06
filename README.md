@@ -1,45 +1,88 @@
-# CUH ROI Classes
-This project contains a collection of python modules for interacting with RayStation Patient Modelling script objects.
+# CUH RayStation Apps 
+This project contains a collection of python modules, and a few GUIs, for interacting with RayStation. 
+
+Dependencies: 
+- Python 3.6 or greater
+
+--- 
+
+## ROILockTime 
+In planning it is sometimes necessary to unlock a Dr approved structure set to move Localisation POIs etc. 
+
+The ROILockTime allows the planner to export a snapshot of the approved structure set, which can later be used by the plan checker to confirm that the ROI Geometries match those aprroved by the Dr to within:
+- ± 1cc in volume 
+- ± 1mm in Centroid 
+
+Some seldom used additional functionality permits the export of the approved ROI Geometries to json, which can subsequently be restored. 
+
+If contours have been restored into the current structure set, any matching ROI labels will have (1) suffixed to their label. 
+
+There is also a button to quantitatively compare the restored contours. Results are exported in CSV format. 
+
+
+### GUI User 
+![](illustrations/roi_lock_time1.png)
+
+
+Planner:
+1. Select the Dr approved structure set from the top drop down. 
+2. Click Export to json. 
+
+Checker: 
+1. Select the Planner approved structure set from the top drop down. 
+2. Click Load reference SS. 
+3. Navigate to the Planner's export. 
+4. Confirm that the Planner's ROI Geometries' volumes and centroids are consistent with the Dr approval. 
+
+Notes:
+
+The top drop down menu configures the selected sub-structure-set on the current exam. 
+
+RayStation serialises structure set approvals - this is most easily understood when looking at the at the DICOM export window. You will see two or three structure sets relating to the different approvals (Dr, Planner etc.). 
+
+There is, however, only one ROI Geometry per exam. 
+
+Volume match is within ± 1cc, centroid match is within 1mm. 
+
+The list of drop-downs allow you to compare different ROIs if the automatic selection fails. 
+
+Ticking the Include contours? radio button will write the ROI Geometries to json as well. Be aware that this is memory intensive. 
+
+If a reference structure set json file contains contours, these can be restored into the current structure set by clicking Restore reference contours. A (1) will be suffixed to any existing ROI labels. 
+
+Clicking Compare restore contours will compare all ROIs with a (1) suffix to the pre-existing ROIs, returning a CSV of comparative metrics such as Dice Similarity Coefficient and Hausdorff distance to agreement. 
 
 ---
 
-## End User Guide 
-Volume match is within ± 1cc, centroid match is within 1mm.
+## API Reference 
+Of course, you do not need to use the GUIs. The following section provides more information on the python modules behind the GUIs. 
 
-## CUHRTException 
-Custom exception. 
-Presents a tkinter messagebox with a customizable error message and the TraceBack. 
+### CUHGetCurrentStructureSetObject
+Script object used to get the current structure set properties in RayStation. 
 
-### Attributes: 
-- message: str
-    - Custom error message. 
-- err: str
-    - TraceBack error message (optional).
+Subsequent script objects inherit from this. 
 
-### Example usage 
-```
-    try:
-        some_object.do_something() 
-    except Exception as err:
-        raise CUHRTStructureSetException(
-            message = (
-                "ERROR!: Some helpful debug info here."
-            ),
-            error = err,
-        )
-```
----
+Attributes:
+- exam 
+- patientID
+- case
+- ss 
 
-## CUHRTROI
+These are all self-explanatory RayStation get_current Script objects. 
+`ss = case.PatientModel.StructureSets[exam.Name]`.
+
+### CUHRTROI
 Helper class that forms the objects in the CUHRTStructureSet class. By default, no contour information is stored to improve performance. 
 
-### Attributes:
+Attributes: 
 - roi: dict
     - label, volume, centroid, colour, contours, has_contours 
 
-### Methods:
+Methods: 
 - load_contours 
     - attempts to load the contours into memory from the current structure set 
+- unload contours 
+    - opposite of above 
 - restore contours 
     - attempts to add the contours stored in memory back in to the current structure set. 
     - steps:
@@ -52,42 +95,46 @@ Helper class that forms the objects in the CUHRTStructureSet class. By default, 
         - roi2: *shallow* CUHRTROI object - no contours or colour.
     - returns: object of class CUHRTCompareROI 
 
-### Example usage 
-It is best to start with a RayStation SubStructureSet object `ss = case.PatientModel.StructureSets[<exam.Name>].SubStructureSets[<sub_structure_set_index>]`. 
+ 
 ```
-    roi = ss.RoiStructures[<index>]
-    my_roi = CUHRTROI(
-        roi = {
-            'label':roi.OfRoi.Name,
-            'colour': ", ".join(
-                            [str(rgb_val) for rgb_val in[
-                            roi.OfRoi.Color.get_A(), roi.OfRoi.Color.get_R(),
-                            roi.OfRoi.Color.get_G(), roi.OfRoi.Color.get_B(),
-                         ]]),
-            'centroid': roi.GetCenterOfRoi(), 
-            'volume': roi.GetRoiVolume(), 
-            'has_contours': False
-        }
-    )
+roi = ss.RoiStructures[<index>]
+my_roi = CUHRTROI(
+    roi = {
+        'label':roi.OfRoi.Name,
+        'colour': ", ".join(
+                        [str(rgb_val) for rgb_val in[
+                        roi.OfRoi.Color.get_A(), roi.OfRoi.Color.get_R(),
+                        roi.OfRoi.Color.get_G(), roi.OfRoi.Color.get_B(),
+                        ]]),
+        'centroid': roi.GetCenterOfRoi(), 
+        'volume': roi.GetRoiVolume(), 
+        'has_contours': False
+    }
+)
 
+my_roi.load_contours() 
+my_roi.restore_contours() 
+my_roi.compare_with_roi('ROILabelInCurrentExam')
 ```
-Then run the methods. 
-```
-    my_roi.load_contours() 
-    my_roi.restore_contours() 
-```
-See notes on CUHRTCompareROI for use of the `my_roi.compare_with_roi()` method. 
 
----
-
-## CUHRTCompareROI
+### CUHRTCompareROI
 Object template for comparing two CUHRTROI objects. Interacts with the current structure set in RayStation. RayStation does all the hard work by providing a method for calculating similarity metrics like. This is a powerful way of numerically auditing changes to structures. 
 
-### Attributes: 
+Args: 
+- roi1: CUHRTROI object 
+- roi2: CUHRTROI object 
+
+Attributes:
+- reference_roi_label
+- reference_roi_volume
+- reference_roi_centroid 
+- compare_roi_label 
+- compare_roi_volume
+- compare_roi_centroid 
 - volume_match: bool
-    - return true if the two CUHRTROI objects have volumes within 0.5cm<sup>3<sup>  
+    - True if the two CUHRTROI objects have volumes within ±1cc. 
 - centroid_match: bool
-    - return true if the two CUHRTROI objects have IEC DICOM Patient X, Y Z within ±0.1mm  
+    - True if the two CUHRTROI objects have IEC DICOM Patient X, Y Z within ±1mm  
 - roi_comparison_results: dict
     - RayStation ComparisonOfRoiGeometries() kwargs:
         - DiceSimilarityCoefficient
@@ -96,6 +143,9 @@ Object template for comparing two CUHRTROI objects. Interacts with the current s
         - Specificity
         - MeanDistanceToAgreement
         - MaxDistanceToAgreement
+
+Methods: 
+- return_formatted_dict 
 
 ### Example usage 
 Assuming you have access to two CUHRTROI objects in the namespace as `roi1` and `roi2`. The following will compare roi1 and roi2. 
@@ -112,25 +162,23 @@ Assuming you have access to two CUHRTROI objects in the namespace as `roi1` and 
         print(f"{k}: {v}")
 ```
 
----
+### CUHRTStructureSet
+This is the workhorse of the ROILockTime script. 
 
-## CUHRTStructureSet
-This is the workhorse of the ROILockTime script. It is best instantiated from a RayStation SubStructureSet object - this is necessary because the SubStrutureSet object holds the structure set approval. 
-
-### Initialisation 
+Initialisation:
 The object can be committed to disc in .json format. You have two options for initialisation either:
 
-1. `my_ss_obj = CUHRTStructureSet(ss_index=1)` in which case the object comes from the current SubStructureSet identified by `ss_index`.
+1. `my_ss_obj = CUHRTStructureSet(sub_structure_set)` in which case the object comes from the current SubStructureSet RayStation Script object.
 2. `my_ss_obj = CUHRTStructureSet(f_path = "./some_json_file.json")` if you want to read back in from disc.  
 
-### Attributes:
+Attributes:
 - locktime: str 
 - reviewer: str
 - f_name: str 
 - rois: list 
     - list of CUHRTROI objects 
 
-### Methods:
+Methods:
 - json_export
     - params:
         - exports object data to json
@@ -139,23 +187,50 @@ The object can be committed to disc in .json format. You have two options for in
 - restore_all_contours
     - restore all contours in CUHRTStructureSet object
 
-### Example usage:
+```
+my_ss_obj = CUHRTStructureSet(sub_structure_set)
+
+print(my_ss_obj.locktime)
+print(my_ss_obj.reviewer) 
+print([roi.roi['label'] for roi in my_ss_obj.rois])
+
+my_ss_obj.json_export(
+    f_out = "./some_root_folder",
+    include_contours=True
+)
+
+my_ss_obj.restore_all_contours()
 
 ```
-    my_ss_obj = CUHRTStructureSet(ss_index=1)
 
-    print(my_ss_obj.locktime)
-    print(my_ss_obj.reviewer) 
-    print([roi.roi['label'] for roi in my_ss_obj.rois])
+### CUHStructureSetException 
+Custom exception template. 
 
-    my_ss_obj.json_export(
-        f_out = "./some_root_folder",
-        include_contours=True
+Kwargs: 
+- error: str (optional)
+- message: str (optional)
+
+```
+try:
+    some_object.do_something() 
+except Exception as err:
+    raise CUHRTStructureSetException(
+        message = (
+            "ERROR!: Some helpful debug info here."
+        ),
+        error = err,
     )
-
-    my_ss_obj.restore_all_contours()
-
 ```
+
+---
+
+### CUHRTWarningMessage
+Uses tkinter messagebox to warn, prompt or provide infomation to the user. 
+
+Kwargs:
+- title: str (optional)
+- message: str (none)
+
 ---
 Liam Stubbington <br> RT Physicist
 <br>Cambridge University Hospitals NHS Foundation Trust

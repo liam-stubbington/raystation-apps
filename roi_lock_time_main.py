@@ -1,8 +1,8 @@
-from structure_set_classes import *
 from os import path
 import tkinter as tk 
 from tkinter import filedialog as fd
 from widgets.cuh_tkinter import *
+from modules.structure_set_classes import *
 from csv import DictWriter
 
 
@@ -93,17 +93,23 @@ class ROILockTimeRow(tk.Frame):
 
     def get_matching_roi_index(self):
         '''
-            TO DO
             Find the closest matching roi from list of reference_rois 
             Reference rois must be objects of type CUHRTROI. 
         '''
         if self.reference_rois:
-            try: 
+            try: # Try to find a roi with a matching name 
                 index = [
                     roi.roi['label'] for roi in self.reference_rois
                     ].index(self.current_roi.roi['label'])
             except  ValueError:
-                index = 0
+                try: # Otherwise try to match to the vol
+                    index = [
+                        round(roi.roi['volume']) for roi in 
+                        self.reference_rois].index(
+                            round(self.current_roi.roi['volume'])) 
+                except ValueError:
+                    index = 0
+                
         else:
             index = 0
         return index
@@ -201,8 +207,7 @@ class ROILockTimeWindow(tk.Tk):
         '''
         self.eval('tk::PlaceWindow . center')
         initial_warning = CUHRTWarningMessage(
-        message = "In 99.99% of cases you will need to have the RTCT selected\n"
-        "to get good results from this script" 
+        message = "You should have the planning CT selected."
         )
         if not initial_warning.answer:
             exit() 

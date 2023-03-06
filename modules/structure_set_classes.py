@@ -26,8 +26,7 @@ class CUHGetCurrentStructureSetObject():
 
 class CUHRTWarningMessage(): 
     ''' 
-        Warns the user about selecting the RTCT image set. 
-        Returns True or False. 
+        Configurable warning message.  
     '''
     def __init__(self, title: str = "WARNING: ", message: str = None):
         
@@ -75,10 +74,6 @@ class CUHRTStructureSetException(Exception):
 class CUHRTROI(CUHGetCurrentStructureSetObject):
     ''' 
         Workhorse of ROILockTime script and other script tools.
-
-        Instantiated from: 
-            • JSON 
-            • RayStation RoiStructure script object 
 
         Attributes: 
             • roi: dict 
@@ -233,7 +228,7 @@ class CUHRTCompareROI(CUHGetCurrentStructureSetObject):
         self.volume_match = round(roi1.roi['volume'],2) == round(
             roi2.roi['volume'],2)
 
-        deltas = [abs(delta)>0.01 for delta in [
+        deltas = [abs(delta)>0.1 for delta in [
             roi1.roi['centroid']['x'] - roi2.roi['centroid']['x'],
             roi1.roi['centroid']['y'] - roi2.roi['centroid']['y'],
             roi1.roi['centroid']['z'] - roi2.roi['centroid']['z']

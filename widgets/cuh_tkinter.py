@@ -76,7 +76,7 @@ class CUHAppButton(tk.Button):
     '''
         Simple button super class with formatting 
     '''
-    def __init__(self, parent, text: str, func, row, col):
+    def __init__(self, parent, text: str, func, row: int, col: int):
         super().__init__(
             parent, 
             background = ORANGE,
