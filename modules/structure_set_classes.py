@@ -225,8 +225,8 @@ class CUHRTCompareROI(CUHGetCurrentStructureSetObject):
         self.compare_roi_label = roi2.roi['label']
         self.compare_roi_volume = roi2.roi['volume']
         self.compare_roi_centroid = roi2.roi['centroid']
-        self.volume_match = round(roi1.roi['volume'],2) == round(
-            roi2.roi['volume'],2)
+        self.volume_match = round(roi1.roi['volume'],1) == round(
+            roi2.roi['volume'],1)
 
         deltas = [abs(delta)>0.1 for delta in [
             roi1.roi['centroid']['x'] - roi2.roi['centroid']['x'],

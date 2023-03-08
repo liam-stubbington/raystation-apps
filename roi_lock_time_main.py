@@ -38,14 +38,12 @@ class ROILockTimeRow(tk.Frame):
                 self, [roi.roi['label'] for roi in self.reference_rois], 
                 0, 2, self.cf_centroid_and_volume, 
                 current_selection_index=self.get_matching_roi_index(),
-                width = 30
             )
         else:
             self.selected_roi = CUHDropDownMenu(
                 self, [''], 
                 0, 2, self.cf_centroid_and_volume, 
                 current_selection_index=self.get_matching_roi_index(),
-                width = 30
             )
 
 
@@ -65,8 +63,7 @@ class ROILockTimeRow(tk.Frame):
             ]
             roi1 = self.current_roi
             volume_match = (
-                abs(round(roi1.roi['volume'],2) - round(roi2.roi['volume'],2))
-                < 1
+                abs(round(roi1.roi['volume'],1) == round(roi2.roi['volume'],1))
             )
             deltas = [abs(delta)>0.1 for delta in [
                 roi1.roi['centroid']['x'] - roi2.roi['centroid']['x'],
@@ -102,14 +99,13 @@ class ROILockTimeRow(tk.Frame):
                     roi.roi['label'] for roi in self.reference_rois
                     ].index(self.current_roi.roi['label'])
             except  ValueError:
-                try: # Otherwise try to match to the vol
+                try: # Otherwise try to match to the vol to 2 decimal place 
                     index = [
-                        round(roi.roi['volume']) for roi in 
+                        round(roi.roi['volume'],2) for roi in 
                         self.reference_rois].index(
-                            round(self.current_roi.roi['volume'])) 
+                            round(self.current_roi.roi['volume'],2)) 
                 except ValueError:
-                    index = 0
-                
+                    index = 0         
         else:
             index = 0
         return index
@@ -125,7 +121,6 @@ class ROILockTimeWindow(tk.Tk):
         self.raystation = CUHGetCurrentStructureSetObject() 
         self.structure_sets = [CUHRTStructureSet(sub_structure_set = i)
         for i in self.raystation.ss.SubStructureSets]
-        # TO DO
         self.reference_structure_set = None 
         self.sub_structure_set_labels = [
             ss.f_name.split("+")[1:-1] for ss in self.structure_sets
@@ -171,8 +166,8 @@ class ROILockTimeWindow(tk.Tk):
         CUHHorizontalRule(self, 3, 0)
 
         # -- STRUCTURES -- # 
-        self.main_frame = CUHFrame(self, 4, 0)
-        self.main_frame.columnconfigure(0, weight =1)
+        self.main_frame = CUHScrollableFrame(self, 4, 0, 600)
+        self.main_frame.frame.columnconfigure(0, weight =1)
         self.show_current_sub_structure_sets_in_window()
 
         CUHHorizontalRule(self, 5, 0)
@@ -216,16 +211,16 @@ class ROILockTimeWindow(tk.Tk):
         self.current_structure_set = self.structure_sets[
             self.ss_dropdown.current()
         ]
-        [item.destroy() for item in self.main_frame.winfo_children()]
+        [item.destroy() for item in self.main_frame.frame.winfo_children()]
         for i, roi in enumerate(self.current_structure_set.rois):
             if self.reference_structure_set:
                 ROILockTimeRow(
-                    self.main_frame, i, roi, 
+                    self.main_frame.frame, i, roi, 
                     self.reference_structure_set.rois
                 )
             else:
                 ROILockTimeRow(
-                    self.main_frame, i, roi,
+                    self.main_frame.frame, i, roi,
                 )
     
     def load_reference_structure_set_from_file(self):

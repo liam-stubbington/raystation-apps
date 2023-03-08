@@ -1,4 +1,4 @@
-# CUH Widget Script Objects 
+# CUH Tkinter Script Objects 
 This package contains a collection of script objects that I have used to create scripting GUIs. 
 
 It is all based on the tkinter module which comes packaged as part of the python standard library.  
@@ -66,6 +66,31 @@ Args:
 
 Kwargs:
 - columnspan (optional, 1)
+
+### CUHScrollableFrame
+
+Simple canvas with a RHS vertical scroll bar. 
+
+Args: 
+- parent: root widget
+- row
+- col
+- height 
+
+height - default height of the scrollable frame, in pixels. 
+
+Kwargs: 
+- columnspan: (optional, 1)
+
+Attributes: 
+- canvas (tk.Canvas)
+- frame (tk.Frame)
+- vsb (tk.ScrollBar)
+
+The frame attribute is a tk.Frame object for placement of widgets inside the scrollable part of the GUI. 
+You will need to columnconfigure for grid etc. 
+
+
 
 ### CUHLabelText
 Simple display of formatted text. 

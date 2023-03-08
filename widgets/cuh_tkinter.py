@@ -151,6 +151,60 @@ class CUHFrame(tk.Frame):
             row = row, column = col, columnspan=columnspan, sticky='NSEW'
         )
 
+class CUHScrollableFrame(tk.Frame):
+    ''' 
+        Simple canvas with a RHS vertical scroll bar. 
+
+        Args: 
+            - parent: root widget
+            - row, col: for grid)
+            - height [pixels]
+
+        height - default height of the scrollable window.
+
+        Kwargs: 
+            - columnspan: int (default 1)
+
+        Attributes: 
+            - canvas 
+            - frame
+            - vsb 
+
+        The frame attribute is a tk.Frame object for placement of widgets. 
+        You will need to columnconfigure for grid etc. 
+
+        Methods: 
+            - configure_scroll_region 
+
+    '''
+    def __init__(self, parent, row: int, col: int, 
+    height: int, columnspan: int = 1):
+        super().__init__(
+            parent, background=BLACK, padx = 0, pady = 0, 
+            )
+
+        self.canvas = tk.Canvas(
+            self, borderwidth=0, background=BLACK, height = height
+        )
+        self.frame = tk.Frame(self.canvas, background=BLACK,)
+        self.vsb = tk.Scrollbar(self, orient="vertical", 
+        command=self.canvas.yview)
+        self.canvas.configure(yscrollcommand=self.vsb.set)
+        self.vsb.pack(side="right", fill="y")
+        self.canvas.pack(side="left", fill="both", expand=True)
+        self.canvas.create_window((0,0), window=self.frame, anchor="nw",)
+
+        self.frame.bind("<Configure>", self.configure_scroll_region)
+
+        self.grid(
+            row = row, column = col, columnspan=columnspan, sticky='NSEW'
+        )
+
+    def configure_scroll_region(self, event):
+        '''Reset the scroll region to encompass the inner frame'''
+        self.canvas.configure(scrollregion=self.canvas.bbox("all"))
+
+
 class CUHHorizontalRule(ttk.Separator):
     '''
         Simple horizontal rule 
@@ -159,7 +213,7 @@ class CUHHorizontalRule(ttk.Separator):
         s = ttk.Style()
         s.configure('TSeparator', background = ORANGE)
         super().__init__(
-            parent, orient = tk.HORIZONTAL, style = 'TSeparator'
+            parent, orient = tk.HORIZONTAL, style = 'TSeparator', 
         )
        
 

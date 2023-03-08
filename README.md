@@ -10,7 +10,7 @@ Dependencies:
 In planning it is sometimes necessary to unlock a Dr approved structure set to move Localisation POIs etc. 
 
 The ROILockTime allows the planner to export a snapshot of the approved structure set, which can later be used by the plan checker to confirm that the ROI Geometries match those aprroved by the Dr to within:
-- ± 1cc in volume 
+- ± 0.1cc in volume 
 - ± 1mm in Centroid 
 
 Some seldom used additional functionality permits the export of the approved ROI Geometries to json, which can subsequently be restored. 
@@ -42,15 +42,15 @@ RayStation serialises structure set approvals - this is most easily understood w
 
 There is, however, only one ROI Geometry per exam. 
 
-Volume match is within ± 1cc, centroid match is within 1mm. 
+Volume match is within ± 0.1cc, centroid match is within 1mm. 
 
 The list of drop-downs allow you to compare different ROIs if the automatic selection fails. 
 
 Ticking the Include contours? radio button will write the ROI Geometries to json as well. Be aware that this is memory intensive. 
 
-If a reference structure set json file contains contours, these can be restored into the current structure set by clicking Restore reference contours. A (1) will be suffixed to any existing ROI labels. 
+If a reference structure set json file contains contours, these can be restored into the current structure set by clicking Restore reference contours. A *" (1)"* will be suffixed to any existing ROI labels. 
 
-Clicking Compare restore contours will compare all ROIs with a (1) suffix to the pre-existing ROIs, returning a CSV of comparative metrics such as Dice Similarity Coefficient and Hausdorff distance to agreement. 
+Clicking Compare restore contours will compare all ROIs with a *" (1)"* suffix to the pre-existing ROIs, returning a CSV of comparative metrics such as Dice Similarity Coefficient and Hausdorff distance to agreement. 
 
 ---
 
@@ -132,7 +132,7 @@ Attributes:
 - compare_roi_volume
 - compare_roi_centroid 
 - volume_match: bool
-    - True if the two CUHRTROI objects have volumes within ±1cc. 
+    - True if the two CUHRTROI objects have volumes within ±0.1cc. 
 - centroid_match: bool
     - True if the two CUHRTROI objects have IEC DICOM Patient X, Y Z within ±1mm  
 - roi_comparison_results: dict
